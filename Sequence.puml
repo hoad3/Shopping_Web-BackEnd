@@ -1,0 +1,415 @@
+﻿@startuml
+'Đăng nhập
+'actor User
+'participant "AuthController" as Auth
+'participant "UserService" as Service
+'participant "TokenService" as Token
+'
+'User -> Auth : Gửi yêu cầu đăng nhập (account, password)
+'Auth -> Service : LoginUserAsync(user)
+'Service -> Service : Kiểm tra tài khoản trong cơ sở dữ liệu
+'alt Tài khoản không tồn tại
+'    Service -> Auth : Lỗi 401 (Tài khoản không tồn tại)
+'else Tài khoản tồn tại
+'    Service -> Service : So sánh mật khẩu đã mã hóa
+'    alt Mật khẩu sai
+'        Service -> Auth : Lỗi 401 (Mật khẩu không chính xác)
+'    else Mật khẩu đúng
+'        Service -> Token : GenerateToken(dbUser)
+'        Token -> Service : Trả về JWT Token
+'        Service -> Auth : Trả về (token, dbUser)
+'    end
+'end
+'Auth -> User : Trả về Token và thông tin người dùng
+
+'Đăng ký
+
+'actor User
+'participant "AuthController" as Auth
+'participant "UserService" as Service
+'participant "AppDbContext" as DbContext
+'
+'User -> Auth : Gửi yêu cầu đăng ký (UserRegisterDto)
+'Auth -> Service : RegisterUserAsync(user)
+'Service -> DbContext : Kiểm tra tài khoản tồn tại
+'alt Tài khoản đã tồn tại
+'    DbContext -> Service : Tài khoản đã tồn tại
+'    Service -> Auth : Lỗi (Account already exists)
+'else Tài khoản chưa tồn tại
+'    Service -> Service : Mã hóa mật khẩu
+'    Service -> DbContext : Thêm người dùng mới
+'    DbContext -> Service : Người dùng đã được thêm thành công
+'    Service -> Auth : Trả về thông báo thành công
+'end
+'Auth -> User : Trả về kết quả đăng ký
+
+'thay đổi mật khẩu
+
+'actor User
+'participant "AuthController" as Auth
+'participant "UserService" as Service
+'participant "AppDbContext" as DbContext
+'
+'User -> Auth : Gửi yêu cầu thay đổi mật khẩu (UserChangePasswordDto)
+'Auth -> Service : ChangePasswordAsync(user)
+'Service -> DbContext : Kiểm tra tài khoản tồn tại
+'alt Tài khoản không tồn tại
+'    DbContext -> Service : Tài khoản không tồn tại
+'    Service -> Auth : Lỗi (Account does not exist)
+'else Tài khoản tồn tại
+'    Service -> Service : Mã hóa mật khẩu mới
+'    Service -> DbContext : Cập nhật mật khẩu người dùng
+'    DbContext -> Service : Người dùng đã được cập nhật thành công
+'    Service -> Auth : Trả về thông báo thành công
+'end
+'Auth -> User : Trả về kết quả thay đổi mật khẩu
+
+'Thêm thông tin người dùng
+'actor User
+'participant "InformationUserController" as Controller
+'participant "IInfoUserService" as Service
+'participant "InfoUserService" as InfoService
+'participant "AppDbContext" as DbContext
+'
+'User -> Controller : Gửi yêu cầu thêm thông tin (InformationUserChange)
+'Controller -> Service : AddInformationAsync(informationuc)
+'Service -> InfoService : Kiểm tra thông tin đã tồn tại
+'InfoService -> DbContext : Tìm kiếm thông tin người dùng theo User_id
+'alt Thông tin người dùng đã tồn tại
+'    DbContext -> InfoService : Thông tin người dùng đã tồn tại
+'    InfoService -> Service : Trả về null
+'    Service -> Controller : Thông báo lỗi
+'else Thông tin không tồn tại
+'    DbContext -> InfoService : Thông tin không tồn tại
+'    InfoService -> DbContext : Thêm thông tin người dùng
+'    DbContext -> InfoService : Thêm thành công
+'    InfoService -> Service : Trả về thông tin người dùng
+'    Service -> Controller : Trả về thông tin người dùng
+'end
+'Controller -> User : Trả về kết quả thêm thông tin
+
+' Sửa thông tin người dùng
+
+'actor User
+'participant "InformationUserController" as Controller
+'participant "IInfoUserService" as Service
+'participant "InfoUserService" as InfoService
+'participant "AppDbContext" as DbContext
+'
+'User -> Controller : Gửi yêu cầu chỉnh sửa thông tin (InformationUserChange)
+'Controller -> Service : UpdateInformationAsync(informationuc)
+'Service -> InfoService : Kiểm tra thông tin đã tồn tại
+'InfoService -> DbContext : Tìm kiếm thông tin người dùng theo User_id
+'alt Thông tin người dùng không tồn tại
+'    DbContext -> InfoService : Thông tin người dùng không tồn tại
+'    InfoService -> Service : Trả về null
+'    Service -> Controller : Thông báo lỗi
+'else Thông tin người dùng đã tồn tại
+'    DbContext -> InfoService : Thông tin người dùng đã tồn tại
+'    InfoService -> DbContext : Cập nhật thông tin người dùng
+'    DbContext -> InfoService : Cập nhật thành công
+'    InfoService -> Service : Trả về thông tin người dùng đã cập nhật
+'end
+'Controller -> User : Trả về kết quả chỉnh sửa thông tin
+
+'Quản lý Product
+'Thêm
+'actor User
+'participant "ProductController" as PC
+'participant "IProductService" as PS
+'participant "ProductService" as PServ
+'participant "AppDbContext" as DB
+'participant "IMinIOService" as MinIO
+'
+'User -> PC: AddProduct(ProductCreateDto)
+'PC -> PS: AddProductAsync(ProductCreateDto)
+'PS -> PServ: AddProductAsync(ProductCreateDto)
+'PServ -> MinIO: UploadFileAsync(image)
+'MinIO --> PServ: imageUrl
+'PServ -> DB: Add(product)
+'DB --> PServ: SaveChanges()
+'PServ --> PS: return product
+'PS --> PC: return product
+'PC --> User: Ok(product)
+
+'Sửa
+'actor User
+'participant "ProductController" as PC
+'participant "IProductService" as PS
+'participant "ProductService" as PServ
+'participant "AppDbContext" as DB
+'participant "IMinIOService" as MinIO
+'
+'User -> PC: ChangeProduct(id, ProductCreateDto)
+'PC -> PS: ChangeProductAsync(id, ProductCreateDto)
+'PS -> PServ: ChangeProductAsync(id, ProductCreateDto)
+'PServ -> DB: GetProductById(id)
+'DB --> PServ: product
+'PServ -> MinIO: DeleteFileAsync(oldImage)
+'MinIO --> PServ: result
+'PServ -> MinIO: UploadFileAsync(newImage)
+'MinIO --> PServ: newImageUrl
+'PServ -> DB: Update(product)
+'DB --> PServ: SaveChanges()
+'PServ --> PS: return updatedProduct
+'PS --> PC: return updatedProduct
+'PC --> User: Ok(updatedProduct)
+
+'Xóa
+'actor User
+'participant "ProductController" as PC
+'participant "IProductService" as PS
+'participant "ProductService" as PServ
+'participant "AppDbContext" as DB
+'participant "IMinIOService" as MinIO
+'
+'User -> PC: DeleteProduct(id)
+'PC -> PS: DeleteProductAsync(id)
+'PS -> PServ: DeleteProductAsync(id)
+'PServ -> DB: GetProductById(id)
+'DB --> PServ: product
+'PServ -> MinIO: DeleteFileAsync(image)
+'MinIO --> PServ: result
+'PServ -> DB: Remove(product)
+'DB --> PServ: SaveChanges()
+'PServ --> PS: return product
+'PS --> PC: return product
+'PC --> User: Ok(product)
+
+'Thêm Giỏ Hàng
+
+'actor User
+'participant "CartsController" as Controller
+'participant "CartService" as Service
+'participant "AppDbContext" as DbContext
+'
+'User -> Controller : AddCart(cartShoping)
+'Controller -> Service : AddCartAsync(cartShoping)
+'Service -> DbContext : Check existing cart by UserId
+'DbContext --> Service : existingCart (null)
+'Service -> DbContext : Add(cartShoping)
+'DbContext -> DbContext : SaveChanges()
+'DbContext --> Service : success
+'Service --> Controller : cartShoping
+'Controller --> User : Created(cartShoping)
+
+'Thêm Hàng Hóa Vào Giỏ Hàng
+'actor User
+'participant "CartsController" as Controller
+'participant "CartService" as Service
+'participant "AppDbContext" as DbContext
+'
+'User -> Controller : AddCartItem(CartId, ProductId)
+'Controller -> Service : AddCartItemAsync(CartId, ProductId)
+'Service -> DbContext : FindCart(CartId)
+'DbContext --> Service : cart (found)
+'Service -> DbContext : Check existing CartItem
+'DbContext --> Service : existingCartItem (null)
+'Service -> DbContext : Add(newCartItem)
+'DbContext -> DbContext : SaveChanges()
+'DbContext --> Service : success
+'Service --> Controller : newCartItem
+'Controller --> User : Ok(newCartItem)
+
+'Sửa Hàng Hóa Trong Giỏ Hàng
+
+'actor User
+'participant "CartsController" as Controller
+'participant "CartService" as Service
+'participant "AppDbContext" as DbContext
+'
+'User -> Controller : UpdateCartItemQuantity(CartId, ProductId, dto)
+'Controller -> Service : UpdateCartItemQuantityAsync(CartId, ProductId, dto)
+'Service -> DbContext : FindCartItem(CartId, ProductId)
+'DbContext --> Service : cartItem (found)
+'Service -> DbContext : Update cartItem.Quantity
+'DbContext -> DbContext : SaveChanges()
+'DbContext --> Service : success
+'Service --> Controller : cartItem
+'Controller --> User : Ok(cartItem)
+
+'Xóa Hàng Hóa Trong Giỏ Hàng
+
+'actor User
+'participant "CartsController" as Controller
+'participant "CartService" as Service
+'participant "AppDbContext" as DbContext
+'
+'User -> Controller : DeleteCart(cartItemId)
+'Controller -> Service : DeleteCartAsync(cartItemId)
+'Service -> DbContext : FindCartItem(cartItemId)
+'DbContext --> Service : cartItem (found)
+'Service -> DbContext : Remove(cartItem)
+'DbContext -> DbContext : SaveChanges()
+'DbContext --> Service : success
+'Service --> Controller : cartItem
+'Controller --> User : Ok(cartItem)
+
+'Đơn mua
+
+'actor User
+'boundary ThanhtoanController
+'control DonmuaService
+'entity AppDbContext
+'entity InformationUser
+'entity Product
+'entity CartItemShoping
+'
+'== Tạo đơn mua ==
+'User -> ThanhtoanController : POST /Donmua
+'ThanhtoanController -> DonmuaService : CreateDonmuaAsync(donmuaDto)
+'DonmuaService -> AppDbContext : InformationUser\nFind nguoimua and nguoiban
+'AppDbContext -> InformationUser : Select by Id
+'DonmuaService -> AppDbContext : Product.Find(donmuaDto.Idproduct)
+'AppDbContext -> Product : Get Product
+'DonmuaService -> Product : Kiểm tra số lượng
+'alt Nếu có đủ số lượng
+'    DonmuaService -> Product : Update số lượng sản phẩm
+'else Nếu không đủ số lượng
+'    DonmuaService -> ThanhtoanController : throw InvalidOperationException
+'end
+'DonmuaService -> AppDbContext : CartItemShoping.Remove
+'DonmuaService -> AppDbContext : SaveChanges
+'ThanhtoanController -> User : Created đơn mua thành công
+'
+'== Lấy thông tin đơn mua ==
+'User -> ThanhtoanController : GET /Get_donmua_userID/{userid}
+'ThanhtoanController -> DonmuaService : GetDonmuaByUserIdAsync(userid)
+'DonmuaService -> AppDbContext : Donmua.Include(Product)
+'AppDbContext -> Product : Lấy thông tin sản phẩm
+'DonmuaService -> User : Trả về danh sách đơn mua
+'
+'User -> ThanhtoanController : GET /Get_donmua_id/{id}
+'ThanhtoanController -> DonmuaService : GetDonmuaByIdAsync(id)
+'DonmuaService -> AppDbContext : Donmua.Find(id)
+'DonmuaService -> User : Trả về thông tin đơn mua
+
+'Đơn mua phía nhà bán lẻ
+
+'actor User
+'participant "ThanhtoanController" as TC
+'participant "IThanhToanService" as TTS
+'participant "ThanhToanService" as TS
+'participant "AppDbContext" as DB
+'
+'== Tạo đơn hàng mới ==
+'User -> TC: CreateThanhtoan(ThanhtoanDto)
+'TC -> TTS: CreateThanhtoanAsync(ThanhtoanDto)
+'TTS -> TS: CreateThanhtoanAsync(ThanhtoanDto)
+'TS -> TS: CalculateTongTien(thanhtoanDto.Dongia)
+'TS -> DB: Add(ThanhToan)
+'DB --> TS: SaveChangesAsync()
+'TS --> TTS: return ThanhToan
+'TTS --> TC: return ThanhToan
+'TC --> User: return "Thanh toán đã được tạo thành công"
+
+'== Lấy thông tin đơn hàng của người bán ==
+'User -> TC: GetThanhToan(idnguoiban)
+'TC -> TTS: GetDonhangNguoibanAsync(idnguoiban)
+'TTS -> TS: GetDonhangNguoibanAsync(idnguoiban)
+'TS -> DB: Find orders by idnguoiban
+'TS -> TS: Fetch image URL if exists
+'DB --> TS: return list of orders
+'TS --> TTS: return list of orders
+'TTS --> TC: return list of orders
+'TC --> User: return order details
+
+'== Cập nhật trạng thái đơn hàng ==
+'User -> TC: UpdateTrangThaiDonHang(id, trangthaidonhang)
+'TC -> TTS: UpdateTrangThaiDonHangAsync(id, trangthaidonhang)
+'TTS -> TS: UpdateTrangThaiDonHangAsync(id, trangthaidonhang)
+'TS -> DB: Find ThanhToan by id
+'alt ThanhToan found
+'    TS -> DB: Update trangthaidonhang
+'    DB --> TS: SaveChangesAsync()
+'    TS --> TTS: return true
+'else ThanhToan not found
+'    TS --> TTS: return false
+'end
+'TTS --> TC: return success/failure status
+'TC --> User: return "Order status updated successfully" / "Update failed"
+
+'Shipper
+
+'actor "Client" as client
+'participant "DeliveryController" as controller
+'participant "DeliveryService" as service
+'participant "AppDbContext" as db
+'
+'client -> controller : POST /AddDelivery
+'controller -> service : AddDelivery(deliveryDto)
+'service -> db : Add new delivery to database
+'db --> service : Delivery saved
+'service --> controller : Delivery object
+'controller --> client : Return Delivery object
+
+'actor "Client" as client
+'participant "DeliveryController" as controller
+'participant "DeliveryService" as service
+'participant "AppDbContext" as db
+'
+'client -> controller : GET /GetDeliveryByNguoiban/{nguoiban}
+'controller -> service : GetDeliveriesByNguoiban(nguoiban)
+'service -> db : Query deliveries by idnguoiban
+'db --> service : List of deliveries
+'service --> controller : List of deliveries
+'controller --> client : Return list of deliveries
+
+'actor "Client" as client
+'participant "DeliveryController" as controller
+'participant "DeliveryService" as service
+'participant "AppDbContext" as db
+'
+'client -> controller : PATCH /UpdateTrangThaiDonHang
+'controller -> service : UpdateTrangThaiDonHang(id)
+'service -> db : Find ThanhToan by id
+'db --> service : ThanhToan object
+'service -> db : Update trangthaidonhang
+'db --> service : Update successful
+'service --> controller : Update status success
+'controller --> client : Status updated successfully
+
+'email OTP
+'actor User
+'participant "MailController" as MailCtrl
+'participant "EmailService" as EmailSvc
+'participant "UserService" as UserSvc
+'participant "OtpService" as OtpSvc
+'
+'User -> MailCtrl : Send OTP Request
+'MailCtrl -> UserSvc : IsEmailRegistered(email)
+'UserSvc --> MailCtrl : Email Registered (Yes/No)
+'
+'alt Email Registered
+'    MailCtrl -> OtpSvc : Generate OTP(email)
+'    OtpSvc --> MailCtrl : OTP
+'    MailCtrl -> EmailSvc : SendOtpEmail(email, OTP)
+'    EmailSvc --> MailCtrl : OTP Sent Confirmation
+'    MailCtrl --> User : OTP Sent Successfully
+'else Email Not Registered
+'    MailCtrl --> User : Error "Email chưa được đăng ký"
+'end
+
+'Payment
+
+actor User
+participant "PaymentController" as PC
+participant "VnPaymentService" as VPS
+participant "Invoice" as INV
+participant "VnPaymentRequest" as VPR
+
+User -> PC : CreatePayment(Invoice)
+PC -> INV : Validate(Amount)
+alt Amount Valid
+    INV -> VPS : ToUrl(Invoice, HttpContext)
+    VPS -> VPR : Generate Payment URL
+    VPR --> VPS : paymentUrl
+    VPS --> PC : paymentUrl
+    PC --> User : Return paymentUrl
+else Amount Invalid
+    PC --> User : Return "Invalid amount"
+end
+
+User -> "VNPay" : Redirect to paymentUrl
+"VNPay" -> User : Payment Result
+@enduml

@@ -1,0 +1,186 @@
+﻿@startuml
+
+'quản lý Product
+'[*] --> Idle
+'
+'Idle --> ProductManagement : Quản lý sản phẩm
+'
+'state ProductManagement {
+'    [*] --> AddingProduct : Gửi yêu cầu thêm sản phẩm
+'    AddingProduct --> ProductAdded : Sản phẩm được thêm thành công
+'    AddingProduct --> AddingFailed : Thêm sản phẩm không thành công
+'    ProductAdded --> Idle : Quay lại trang quản lý sản phẩm
+'
+'    [*] --> UpdatingProduct : Gửi yêu cầu cập nhật sản phẩm
+'    UpdatingProduct --> ProductUpdated : Sản phẩm được cập nhật thành công
+'    UpdatingProduct --> UpdateFailed : Cập nhật sản phẩm không thành công
+'    ProductUpdated --> Idle : Quay lại trang quản lý sản phẩm
+'
+'    [*] --> DeletingProduct : Gửi yêu cầu xóa sản phẩm
+'    DeletingProduct --> ProductDeleted : Sản phẩm được xóa thành công
+'    DeletingProduct --> DeleteFailed : Xóa sản phẩm không thành công
+'    ProductDeleted --> Idle : Quay lại trang quản lý sản phẩm
+'}
+'
+'Idle --> FindingProduct : Gửi yêu cầu tìm sản phẩm
+'FindingProduct --> ProductFound : Sản phẩm được tìm thấy
+'FindingProduct --> ProductNotFound : Không tìm thấy sản phẩm
+'ProductFound --> Idle : Quay lại trang quản lý sản phẩm
+'ProductNotFound --> Idle : Quay lại trang quản lý sản phẩm
+
+'Quản lý giỏ hàng
+
+'[*] --> Idle : Khởi tạo hệ thống
+'
+'state "Quản lý Giỏ hàng" as CartManagement {
+'    
+'    [*] --> CheckingCart
+'    
+'    CheckingCart : Kiểm tra giỏ hàng của người dùng
+'    CheckingCart --> CartFound : Đã có giỏ hàng
+'    CheckingCart --> CartNotFound : Chưa có giỏ hàng
+'
+'    state CartOperations {
+'        [*] --> AddingItem
+'        AddingItem : Thêm hàng hóa vào giỏ
+'        AddingItem --> UpdatingItem : Cập nhật số lượng hàng hóa
+'        UpdatingItem --> DeletingItem : Xóa hàng hóa khỏi giỏ
+'        DeletingItem --> AddingItem : Quay lại thêm hàng hóa
+'        
+'        AddingItem --> Success : Thao tác thành công
+'        UpdatingItem --> Success
+'        DeletingItem --> Success
+'    }
+'
+'    CartFound --> CartOperations : Giỏ hàng đã tồn tại
+'    CartNotFound --> CreatingCart : Tạo giỏ hàng mới
+'    CreatingCart --> CartOperations : Tạo giỏ hàng thành công
+'}
+'
+'CartManagement --> Idle : Quay lại trạng thái chờ
+'
+'[*] --> End : Hoàn tất
+
+'Quản lý đơn mua 
+
+'[*] --> Nhập_thông_tin_đơn_mua
+'Nhập_thông_tin_đơn_mua : Người dùng nhập thông tin đơn mua
+'Nhập_thông_tin_đơn_mua --> Kiểm_tra_thông_tin : Gửi thông tin đến hệ thống
+'
+'state Kiểm_tra_thông_tin {
+'  [*] --> Kiểm_tra_nguời_bán_và_người_mua
+'  Kiểm_tra_nguời_bán_và_người_mua --> Kiểm_tra_sản_phẩm : Người mua/người bán hợp lệ
+'  Kiểm_tra_nguời_bán_và_người_mua --> [*] : Lỗi thông tin người bán/mua
+'}
+'
+'Kiểm_tra_sản_phẩm --> Kiểm_tra_số_lượng_sản_phẩm : Sản phẩm hợp lệ
+'Kiểm_tra_sản_phẩm --> [*] : Lỗi sản phẩm không tồn tại
+'
+'state Kiểm_tra_số_lượng_sản_phẩm {
+'  [*] --> Kiểm_tra_tồn_kho
+'  Kiểm_tra_tồn_kho --> Đủ_sản_phẩm : Số lượng sản phẩm đủ
+'  Kiểm_tra_tồn_kho --> [*] : Không đủ số lượng sản phẩm
+'}
+'
+'Đủ_sản_phẩm --> Lưu_đơn_mua : Tiến hành lưu đơn mua
+'Lưu_đơn_mua --> Giảm_số_lượng_hàng_tồn : Đơn mua được lưu
+'Giảm_số_lượng_hàng_tồn --> Xóa_sản_phẩm_khỏi_giỏ_hàng : Số lượng hàng tồn giảm
+'
+'Xóa_sản_phẩm_khỏi_giỏ_hàng --> [*] : Hoàn thành
+'
+'[*] --> [*] : Thông báo lỗi nếu có
+
+'Quản lý tạo đơn hàng
+
+'[*] --> Nhận_thông_tin_thanh_toán : Bắt đầu quy trình tạo đơn hàng
+'
+'Nhận_thông_tin_thanh_toán --> Kiểm_tra_dữ_liệu : Xác minh dữ liệu thanh toán
+'Kiểm_tra_dữ_liệu --> Dữ_liệu_hợp_lệ : Dữ liệu hợp lệ
+'Kiểm_tra_dữ_liệu --> Dữ_liệu_không_hợp_lệ : Dữ liệu không hợp lệ
+'
+'Dữ_liệu_không_hợp_lệ --> [*] : Quy trình dừng lại
+'
+'Dữ_liệu_hợp_lệ --> Tính_tổng_tiền : Tính toán số tiền cần thanh toán
+'Tính_tổng_tiền --> Tạo_đơn_hàng : Khởi tạo đối tượng ThanhToan
+'Tạo_đơn_hàng --> Lưu_đơn_hàng_vào_CSDL : Thêm thông tin đơn hàng vào cơ sở dữ liệu
+'Lưu_đơn_hàng_vào_CSDL --> Cập_nhật_trạng_thái_đơn_hàng : Thay đổi trạng thái đơn hàng
+'Cập_nhật_trạng_thái_đơn_hàng --> Hoàn_thành : Đơn hàng đã được lưu thành công
+'
+'Hoàn_thành --> [*] : Kết thúc quy trình
+
+'Shipper
+
+'skinparam rectangle {
+'    BackgroundColor #E0E0E0
+'    BorderColor #000000
+'}
+'
+'[*] --> Chờ_Xử_Lý
+'
+'Chờ_Xử_Lý --> Thêm_Đơn_Hàng : Thêm_Đơn_Hàng
+'Thêm_Đơn_Hàng --> Chờ_Xử_Lý : Hoàn_Tất_Thêm
+'
+'Chờ_Xử_Lý --> Đã_Giao : Nhận_Giao_Hàng
+'Chờ_Xử_Lý --> Đã_Từ_Chối : Từ_Chối_Giao_Hàng
+'
+'Đã_Giao --> Đang_Giao : Giao_Hàng
+'Đang_Giao --> Hoàn_Tất : Hoàn_Tất_Giao_Hàng
+'Đang_Giao --> Đã_Từ_Chối : Từ_Chối_Giao_Hàng
+'
+'Hoàn_Tất --> [*]
+'Đã_Từ_Chối --> [*]
+
+'Email
+
+'[*] --> Idle : Start
+'
+'Idle --> ValidateEmail : Request OTP
+'ValidateEmail --> EmailRegistered : Check if email is registered
+'EmailRegistered --> SendOtp : Email registered
+'EmailRegistered --> EmailNotRegistered : Email not registered
+'
+'SendOtp --> OtpSent : Send OTP
+'OtpSent --> [*] : Success
+'
+'EmailNotRegistered --> [*] : Error "Email chưa được đăng ký trong hệ thống."
+'
+'Idle --> [*] : End
+
+' Payment
+'[*] --> Initialize
+'
+'state Initialize {
+'    [*] --> CreatePaymentRequest
+'}
+'
+'state CreatePaymentRequest {
+'    CreatePaymentRequest --> ValidateAmount: Amount > 0
+'    ValidateAmount --> AmountValid: Valid
+'    ValidateAmount --> AmountInvalid: Invalid
+'
+'    state AmountValid {
+'        AmountValid --> GeneratePaymentUrl
+'        GeneratePaymentUrl --> PaymentUrlGenerated: URL Created
+'        PaymentUrlGenerated --> [*]
+'    }
+'
+'    state AmountInvalid {
+'        AmountInvalid --> [*]
+'    }
+'}
+'
+'state PaymentUrlGenerated {
+'    [*] --> SendPaymentRequest
+'}
+'
+'state SendPaymentRequest {
+'    SendPaymentRequest --> PaymentInProgress
+'    PaymentInProgress --> PaymentSuccessful: Payment Completed
+'    PaymentInProgress --> PaymentFailed: Payment Failed
+'    PaymentInProgress --> PaymentCanceled: Payment Canceled
+'}
+'
+'PaymentSuccessful --> [*]
+'PaymentFailed --> [*]
+'PaymentCanceled --> [*]
+@enduml
